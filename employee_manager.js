@@ -125,14 +125,14 @@ function addEmployee(roles, managers) {
     .then((answers) => {
       //get role id
       connection.query(
-        `SELECT id FROM roles WHERE name=${answers.role}`,
+        `SELECT id FROM role WHERE title="${answers.role}"`,
         (err, data) => {
           if (err) throw err;
           let roleID = data[0].id;
           //get manager if one is defined
           if (answers.manager != "NONE") {
             connection.query(
-              `SELECT id from employee WHERE first_name=${answers.manager}`,
+              `SELECT id FROM employee WHERE first_name="${answers.manager}"`,
               (err, data) => {
                 if (err) throw err;
                 let manager = data[0].id;
@@ -154,7 +154,7 @@ function addEmployee(roles, managers) {
           } else {
             values = [[answers.firstName, answers.lastName, roleID]];
             connection.query(
-              "INSERT INTO employee (first_name, last_name, role_id",
+              "INSERT INTO employee (first_name, last_name, role_id) VALUE ?",
               [values],
               (err, data) => {
                 if (err) throw err;
@@ -205,6 +205,26 @@ async function main() {
           addRole(allDeps);
           break;
         case "Employee":
+          const allRoles = [];
+          const allManagers = ["NONE"];
+          connection.query("SELECT * FROM role", (err, data) => {
+            if (err) throw err;
+            for (role of data) {
+              let roleName = role.title;
+              allRoles.push(roleName);
+            }
+            connection.query(
+              "SELECT * FROM employee WHERE manager_id IS NULL",
+              (err, data) => {
+                if (err) throw err;
+                for (manager of data) {
+                  let managerName = `${manager.firstName}`;
+                  allManagers.push(managerName);
+                }
+                addEmployee(allRoles, allManagers);
+              }
+            );
+          });
           break;
       }
       break;
