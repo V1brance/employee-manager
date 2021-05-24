@@ -97,30 +97,76 @@ function addRole(deps) {
 }
 
 function addEmployee(roles, managers) {
-  return inquirer.prompt([
-    {
-      name: "firstName",
-      type: "input",
-      message: "Enter the employees first name:",
-    },
-    {
-      name: "lastName",
-      type: "input",
-      message: "Enter the employees last name:",
-    },
-    {
-      name: "role",
-      type: "list",
-      message: "What job title does this employee have:",
-      choices: roles,
-    },
-    {
-      name: "manager",
-      type: "list",
-      message: "Who is this employee's manager (select NONE if N/A):",
-      choices: managers,
-    },
-  ]);
+  return inquirer
+    .prompt([
+      {
+        name: "firstName",
+        type: "input",
+        message: "Enter the employees first name:",
+      },
+      {
+        name: "lastName",
+        type: "input",
+        message: "Enter the employees last name:",
+      },
+      {
+        name: "role",
+        type: "list",
+        message: "What job title does this employee have:",
+        choices: roles,
+      },
+      {
+        name: "manager",
+        type: "list",
+        message: "Who is this employee's manager (select NONE if N/A):",
+        choices: managers,
+      },
+    ])
+    .then((answers) => {
+      //get role id
+      connection.query(
+        `SELECT id FROM roles WHERE name=${answers.role}`,
+        (err, data) => {
+          if (err) throw err;
+          let roleID = data[0].id;
+          //get manager if one is defined
+          if (answers.manager != "NONE") {
+            connection.query(
+              `SELECT id from employee WHERE first_name=${answers.manager}`,
+              (err, data) => {
+                if (err) throw err;
+                let manager = data[0].id;
+                values = [
+                  [answers.firstName, answers.lastName, roleID, manager],
+                ];
+                connection.query(
+                  "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUE ?",
+                  [values],
+                  (err, data) => {
+                    if (err) throw err;
+                    console.log(
+                      `Added ${answers.firstName} ${answers.lastName} to database...`
+                    );
+                  }
+                );
+              }
+            );
+          } else {
+            values = [[answers.firstName, answers.lastName, roleID]];
+            connection.query(
+              "INSERT INTO employee (first_name, last_name, role_id",
+              [values],
+              (err, data) => {
+                if (err) throw err;
+                console.log(
+                  `Added ${answers.firstName} ${answers.lastName} to database...`
+                );
+              }
+            );
+          }
+        }
+      );
+    });
 }
 
 function handleView() {
