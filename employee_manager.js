@@ -54,7 +54,6 @@ function addDepartment() {
       let values = [[answers.depName]];
       connection.query(query, [values], (err, data) => {
         if (err) throw err;
-        console.log(`Added ${answers.depName} department to database...`);
       });
     });
 }
@@ -90,7 +89,6 @@ function addRole(deps) {
           let values = [[answers.title, answers.salary, depID]];
           connection.query(query, [values], (err, data) => {
             if (err) throw err;
-            console.log(`Employee role of ${answers.title} created...`);
           });
         }
       );
@@ -147,9 +145,6 @@ function addEmployee(roles, managers) {
                   [values],
                   (err, data) => {
                     if (err) throw err;
-                    console.log(
-                      `Added ${answers.firstName} ${answers.lastName} to database...`
-                    );
                   }
                 );
               }
@@ -161,9 +156,6 @@ function addEmployee(roles, managers) {
               [values],
               (err, data) => {
                 if (err) throw err;
-                console.log(
-                  `Added ${answers.firstName} ${answers.lastName} to database...`
-                );
               }
             );
           }
@@ -184,6 +176,40 @@ function handleView() {
     ])
     .then((answers) => {
       return answers.viewType;
+    });
+}
+
+function handleUpdate(employeeList) {
+  return inquirer
+    .prompt([
+      {
+        name: "employee",
+        type: "list",
+        message: "Which employee are you updating:",
+        choices: employeeList,
+      },
+    ])
+    .then((answers) => {
+      employeeName = answers.employee.split(" ");
+      employeeLast = employeeName[1];
+      return employeeLast;
+    });
+}
+
+function getNewRole(roleList) {
+  return inquirer
+    .prompt([
+      {
+        name: "newRole",
+        type: "list",
+        message: "What is the employee's new role:",
+        choices: roleList,
+      },
+    ])
+    .then((answers) => {
+      let role = answers.newRole.split(" ");
+      let newRole = role[0];
+      return newRole;
     });
 }
 
@@ -273,6 +299,39 @@ async function main() {
       }
       break;
     case "Update":
+      let employeeList = [];
+      connection.query(
+        "SELECT employee.first_name, employee.last_name FROM employee",
+        async (err, data) => {
+          if (err) throw err;
+          for (employee of data) {
+            employeeName = `${employee.first_name} ${employee.last_name}`;
+            employeeList.push(employeeName);
+          }
+          let employeeLast = await handleUpdate(employeeList);
+          connection.query(
+            "SELECT role.id, role.title, role.salary, department.name FROM (role INNER JOIN department ON department.id=role.department_id)",
+            async (err, data) => {
+              let roleList = [];
+              if (err) throw err;
+              for (role of data) {
+                roleData = `${role.id} Role: ${role.title} - ${role.salary} Department: ${role.name}`;
+                roleList.push(roleData);
+              }
+              let newRole = await getNewRole(roleList);
+              connection.query(
+                `UPDATE employee SET employee.role_id=${newRole} WHERE employee.last_name="${employeeLast}"`,
+                (err, data) => {
+                  if (err) throw err;
+                  setTimeout(function () {
+                    main();
+                  }, 1000);
+                }
+              );
+            }
+          );
+        }
+      );
       break;
     case "Exit":
       connection.end();
