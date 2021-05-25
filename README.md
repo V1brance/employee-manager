@@ -36,7 +36,7 @@ npm i
 
 ## Deployed Product
 
-You can look at a video tutorial here: [Video]()
+You can look at a video tutorial here: [Video](https://drive.google.com/file/d/1U9opOdUXg7Mtl90CLltjMoJEy9WgD48z/view)
 
 ### Credits and Contributions:
 
