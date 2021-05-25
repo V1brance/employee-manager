@@ -15,7 +15,7 @@ function getAction() {
       {
         name: "action",
         type: "list",
-        message: "What are you trying to do with your employee database?",
+        message: "What action would you like to take:",
         choices: ["Add", "View", "Update", "Exit"],
       },
     ])
@@ -191,18 +191,20 @@ async function main() {
       let addType = await handleAdd();
       switch (addType) {
         case "Department":
-          addDepartment();
+          await addDepartment();
+          main();
           break;
         case "Role":
           const allDeps = [];
-          connection.query("SELECT * FROM department", (err, data) => {
+          connection.query("SELECT * FROM department", async (err, data) => {
             if (err) throw err;
             for (department of data) {
               let depName = department.name;
               allDeps.push(depName);
             }
+            await addRole(allDeps);
+            main();
           });
-          addRole(allDeps);
           break;
         case "Employee":
           const allRoles = [];
@@ -215,13 +217,14 @@ async function main() {
             }
             connection.query(
               "SELECT * FROM employee WHERE manager_id IS NULL",
-              (err, data) => {
+              async (err, data) => {
                 if (err) throw err;
                 for (manager of data) {
                   let managerName = `${manager.firstName}`;
                   allManagers.push(managerName);
                 }
-                addEmployee(allRoles, allManagers);
+                await addEmployee(allRoles, allManagers);
+                main();
               }
             );
           });
@@ -230,16 +233,31 @@ async function main() {
       break;
     case "View":
       let viewType = await handleView();
+      switch (viewType) {
+        case "Employees":
+          break;
+        case "Departments":
+          break;
+        case "Roles":
+          break;
+      }
       break;
     case "Update":
       break;
     case "Exit":
+      return false;
       break;
   }
+  return true;
 }
 
-connection.connect((err) => {
-  if (err) throw err;
-  console.log(`Connected at ${connection.threadId}`);
-  main();
-});
+async function startUp() {
+  connection.connect((err) => {
+    if (err) throw err;
+    console.log(`Connected at ${connection.threadId}`);
+    let run = true;
+    main();
+  });
+}
+
+startUp();
