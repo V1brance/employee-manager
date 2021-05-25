@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const cTable = require("console.table");
 
 const connection = mysql.createConnection({
   host: "localhost",
@@ -131,8 +132,10 @@ function addEmployee(roles, managers) {
           let roleID = data[0].id;
           //get manager if one is defined
           if (answers.manager != "NONE") {
+            managerData = answers.manager.split(" ");
+            managerName = managerData[0];
             connection.query(
-              `SELECT id FROM employee WHERE first_name="${answers.manager}"`,
+              `SELECT id FROM employee WHERE first_name="${managerName}"`,
               (err, data) => {
                 if (err) throw err;
                 let manager = data[0].id;
@@ -216,12 +219,12 @@ async function main() {
               allRoles.push(roleName);
             }
             connection.query(
-              "SELECT * FROM employee WHERE manager_id IS NULL",
+              "SELECT employee.first_name, employee.last_name, role.title, department.name FROM ((employee INNER JOIN role ON role.id = employee.role_id) INNER JOIN department ON department.id = role.department_id)",
               async (err, data) => {
                 if (err) throw err;
-                for (manager of data) {
-                  let managerName = `${manager.firstName}`;
-                  allManagers.push(managerName);
+                for (employee of data) {
+                  newEmp = `${employee.first_name} ${employee.last_name} - ${employee.name} - ${employee.title}`;
+                  allManagers.push(newEmp);
                 }
                 await addEmployee(allRoles, allManagers);
                 main();
@@ -235,20 +238,46 @@ async function main() {
       let viewType = await handleView();
       switch (viewType) {
         case "Employees":
+          connection.query(
+            "SELECT employee.first_name, employee.last_name, role.title, role.salary, department.name FROM ((employee INNER JOIN role ON role.id = employee.role_id) INNER JOIN department ON department.id = role.department_id)",
+            async (err, data) => {
+              if (err) throw err;
+              console.table("Employee Data", data);
+              setTimeout(function () {
+                main();
+              }, 2000);
+            }
+          );
           break;
         case "Departments":
+          connection.query("SELECT * FROM department", (err, data) => {
+            if (err) throw err;
+            console.table("Departments", data);
+            setTimeout(function () {
+              main();
+            }, 2000);
+          });
           break;
         case "Roles":
+          connection.query(
+            "SELECT role.id, role.title, role.salary, department.name FROM (role INNER JOIN department ON department.id=role.department_id)",
+            (err, data) => {
+              if (err) throw err;
+              console.table("Role Data", data);
+              setTimeout(function () {
+                main();
+              }, 2000);
+            }
+          );
           break;
       }
       break;
     case "Update":
       break;
     case "Exit":
-      return false;
+      connection.end();
       break;
   }
-  return true;
 }
 
 async function startUp() {
